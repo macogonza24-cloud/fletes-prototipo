@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FletePy — Prototipo interactivo</title>
+<meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
+<meta name="googlebot" content="noindex, nofollow">
+<meta name="description" content="Prototipo navegable de la plataforma de fletes. Alterna entre vista de escritorio y vista de celular.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --tinta:#0E1B2A; --tinta2:#26374A; --gris:#6B7C8E; --linea:#E2E8F0;
+  --fondo:#F4F6F9; --blanco:#fff;
+  --acento:#0F5C8C; --acento2:#1279B8; --acento-suave:#E8F1F8;
+  --ambar:#E08A1E; --ambar-suave:#FDF3E3;
+  --verde:#177A4C; --verde-suave:#E6F4EC; --rojo:#B3261E; --rojo-suave:#FBEAE9;
+  --r:14px; --sombra:0 1px 2px rgba(14,27,42,.06),0 8px 24px rgba(14,27,42,.06);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:#0E1B2A;color:var(--tinta);
+  font-size:15px;line-height:1.5;overflow-x:hidden}
+h1,h2,h3,.pop{font-family:Poppins,Inter,sans-serif;letter-spacing:-.01em}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
+input,select{font:inherit;width:100%;padding:11px 13px;border:1px solid var(--linea);border-radius:10px;background:#fff;color:var(--tinta)}
+input:focus,select:focus{outline:2px solid var(--acento2);outline-offset:-1px}
+label{display:block;font-size:12.5px;font-weight:600;color:var(--tinta2);margin-bottom:5px}
+
+/* ===== barra de control del prototipo ===== */
+.ctl{position:fixed;inset:0 0 auto 0;height:56px;background:#0E1B2A;border-bottom:1px solid #1E3550;
+  display:flex;align-items:center;gap:14px;padding:0 16px;z-index:99;color:#fff}
+.ctl .marca{font-family:Poppins;font-weight:700;font-size:15px;letter-spacing:.02em}
+.ctl .tag{font-size:10.5px;background:#1E3550;color:#8FB6D6;padding:3px 7px;border-radius:5px;font-weight:600}
+.ctl .sep{flex:1}
+.seg{display:flex;background:#16283C;border-radius:9px;padding:3px;gap:2px}
+.seg button{padding:6px 13px;border-radius:7px;font-size:12.5px;font-weight:600;color:#8FB6D6;white-space:nowrap}
+.seg button.on{background:#2C86C4;color:#fff}
+.ctl .rot{font-size:11.5px;color:#7E9CB8;display:none}
+@media(min-width:900px){.ctl .rot{display:block}}
+
+/* ===== escenario ===== */
+.escenario{padding-top:56px;min-height:100vh;background:#0E1B2A;display:flex;justify-content:center;align-items:flex-start}
+.marco{background:var(--fondo);width:100%;min-height:calc(100vh - 56px);transition:.32s cubic-bezier(.4,0,.2,1);position:relative;overflow:hidden}
+body.movil .escenario{padding:34px 16px 40px;align-items:center;min-height:100vh}
+body.movil .marco{width:390px;height:790px;min-height:0;border-radius:38px;border:11px solid #000;
+  box-shadow:0 30px 70px rgba(0,0,0,.55);overflow:hidden}
+body.movil .notch{display:block}
+.notch{display:none;position:absolute;top:0;left:50%;transform:translateX(-50%);width:135px;height:26px;
+  background:#000;border-radius:0 0 16px 16px;z-index:40}
+
+/* ===== interior de la app ===== */
+.app{height:100%;display:flex;flex-direction:column;overflow:hidden}
+.topbar{background:#fff;border-bottom:1px solid var(--linea);display:flex;align-items:center;gap:10px;
+  padding:12px 18px;flex-shrink:0}
+body.movil .topbar{padding:34px 16px 10px}
+.logo{display:flex;align-items:center;gap:8px;font-family:Poppins;font-weight:700;font-size:16px;color:var(--acento)}
+.logo svg{width:22px;height:22px}
+.nav{display:flex;gap:2px;margin-left:18px}
+body.movil .nav{display:none}
+.nav button{padding:7px 12px;border-radius:8px;font-size:13.5px;font-weight:500;color:var(--tinta2)}
+.nav button.on{background:var(--acento-suave);color:var(--acento);font-weight:600}
+.topbar .sep{flex:1}
+.avatar{width:32px;height:32px;border-radius:50%;background:var(--acento);color:#fff;display:grid;place-items:center;
+  font-size:12.5px;font-weight:700;flex-shrink:0}
+
+.cuerpo{flex:1;overflow-y:auto;padding:22px}
+body.movil .cuerpo{padding:16px 16px 12px}
+.wrap{max-width:1060px;margin:0 auto}
+
+.tabbar{display:none;background:#fff;border-top:1px solid var(--linea);padding:8px 6px 22px;flex-shrink:0}
+body.movil .tabbar{display:flex}
+.tabbar button{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10.5px;
+  font-weight:600;color:var(--gris);padding:4px 0}
+.tabbar button.on{color:var(--acento)}
+.tabbar svg{width:21px;height:21px}
+
+/* ===== piezas ===== */
+.pantalla{display:none;animation:ap .22s ease}
+.pantalla.on{display:block}
+@keyframes ap{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.tit{font-size:22px;font-weight:700;margin-bottom:3px}
+body.movil .tit{font-size:19px}
+.sub{color:var(--gris);font-size:13.5px;margin-bottom:18px}
+.card{background:#fff;border:1px solid var(--linea);border-radius:var(--r);padding:18px;box-shadow:var(--sombra);margin-bottom:14px}
+.card h3{font-size:15px;font-weight:600;margin-bottom:12px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.cols{display:grid;grid-template-columns:1.4fr 1fr;gap:16px;align-items:start}
+body.movil .grid3,body.movil .cols{grid-template-columns:1fr}
+.f{margin-bottom:13px}
+.btn{display:block;width:100%;background:var(--acento);color:#fff;padding:12px;border-radius:10px;
+  font-weight:600;font-size:14.5px;text-align:center;transition:.15s}
+.btn:hover{background:var(--acento2)}
+.btn.sec{background:#fff;color:var(--acento);border:1.5px solid var(--acento)}
+.btn.amb{background:var(--ambar)}
+.btn.off{background:#E7EBF0;color:#98A5B4;cursor:not-allowed}
+.btn.sm{padding:9px;font-size:13px}
+.chip{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:20px;font-size:11.5px;font-weight:600}
+.chip.a{background:var(--verde-suave);color:var(--verde)}
+.chip.b{background:var(--ambar-suave);color:var(--ambar)}
+.chip.c{background:var(--acento-suave);color:var(--acento)}
+.chip.d{background:var(--rojo-suave);color:var(--rojo)}
+.item{display:flex;gap:12px;align-items:center;padding:13px 0;border-bottom:1px solid var(--linea);cursor:pointer}
+.item:last-child{border-bottom:0}
+.item:hover{background:#FAFBFC}
+.ico{width:40px;height:40px;border-radius:10px;background:var(--acento-suave);color:var(--acento);
+  display:grid;place-items:center;flex-shrink:0}
+.ico svg{width:20px;height:20px}
+.item .txt{flex:1;min-width:0}
+.item .txt b{display:block;font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item .txt span{font-size:12.5px;color:var(--gris)}
+.precio{font-family:Poppins;font-weight:700;font-size:15px;white-space:nowrap;margin-left:auto}
+body.movil .item{flex-wrap:wrap;align-items:flex-start}
+body.movil .item .precio{width:100%;text-align:right;margin-top:4px;font-size:14px}
+.kpi{background:#fff;border:1px solid var(--linea);border-radius:var(--r);padding:15px}
+.kpi span{font-size:12px;color:var(--gris);font-weight:500}
+.kpi b{display:block;font-family:Poppins;font-size:23px;font-weight:700;margin-top:3px}
+.hero{background:linear-gradient(135deg,#0E1B2A,#12456B);color:#fff;border-radius:18px;padding:34px;margin-bottom:16px}
+body.movil .hero{padding:24px}
+.hero h2{font-size:27px;font-weight:700;line-height:1.2;margin-bottom:9px}
+body.movil .hero h2{font-size:22px}
+.hero p{color:#B6CCDE;font-size:14.5px;margin-bottom:18px}
+.hero .btn{max-width:230px;background:var(--ambar)}
+.nota{background:var(--acento-suave);border-left:3px solid var(--acento);border-radius:0 10px 10px 0;
+  padding:12px 14px;font-size:13px;color:var(--tinta2);margin-bottom:14px}
+.aviso{background:var(--ambar-suave);border-left:3px solid var(--ambar);border-radius:0 10px 10px 0;
+  padding:12px 14px;font-size:13px;margin-bottom:14px}
+.linea{display:flex;justify-content:space-between;padding:8px 0;font-size:13.5px;border-bottom:1px dashed var(--linea)}
+.linea:last-child{border:0}
+.linea b{font-weight:600}
+.barra{height:7px;background:var(--linea);border-radius:4px;overflow:hidden;margin:9px 0 6px}
+.barra i{display:block;height:100%;background:var(--verde);border-radius:4px}
+.mapa{height:150px;border-radius:12px;background:
+  repeating-linear-gradient(45deg,#E8EEF4 0 12px,#EEF3F7 12px 24px);
+  display:grid;place-items:center;color:var(--gris);font-size:12.5px;margin-bottom:13px;border:1px solid var(--linea)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--gris);
+  padding:8px 6px;border-bottom:1px solid var(--linea)}
+td{padding:11px 6px;border-bottom:1px solid var(--linea)}
+.pie{text-align:center;color:var(--gris);font-size:11.5px;padding:18px 0 4px}
+.link{color:var(--acento);font-weight:600;cursor:pointer;font-size:13.5px}
+
+/* ===== porton de acceso ===== */
+#porton{position:fixed;inset:0;z-index:200;background:#0E1B2A;display:grid;place-items:center;padding:24px}
+#porton.oculto{display:none}
+.pcard{background:#fff;border-radius:18px;padding:34px 30px;max-width:380px;width:100%;
+  box-shadow:0 30px 80px rgba(0,0,0,.5);text-align:center}
+.pcard .plogo{display:inline-flex;align-items:center;gap:8px;font-family:Poppins;font-weight:700;
+  font-size:19px;color:var(--acento);margin-bottom:6px}
+.pcard .plogo svg{width:24px;height:24px}
+.pcard h1{font-size:19px;font-weight:700;margin-bottom:8px}
+.pcard p{font-size:13.5px;color:var(--gris);margin-bottom:20px;line-height:1.55}
+.pcard input{text-align:center;letter-spacing:.06em;margin-bottom:12px}
+.pcard .err{color:var(--rojo);font-size:12.5px;height:16px;margin-top:8px}
+.pcard .fin{margin-top:18px;font-size:11.5px;color:var(--gris)}
+
+</style>
+</head>
+<body>
+
+
+<div id="porton">
+  <div class="pcard">
+    <div class="plogo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M14 9h4l4 4v4a1 1 0 0 1-1 1h-2"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg>
+      FletePy
+    </div>
+    <h1>Prototipo privado</h1>
+    <p>Este material es confidencial y se comparte únicamente con las personas autorizadas del proyecto. Ingresá el código de acceso para continuar.</p>
+    <input id="clave" type="password" placeholder="Código de acceso" autocomplete="off" autofocus>
+    <button class="btn" id="entrar">Entrar</button>
+    <div class="err" id="perr"></div>
+    <div class="fin">Marcos González · Desarrollador Full Stack</div>
+  </div>
+</div>
+
+<div class="ctl">
+  <span class="marca">Prototipo · Plataforma de fletes</span>
+  <span class="tag">NO FUNCIONAL</span>
+  <span class="sep"></span>
+  <span class="rot">Perfil</span>
+  <div class="seg" id="segRol">
+    <button data-rol="cliente" class="on">Cliente</button>
+    <button data-rol="fletero">Fletero</button>
+    <button data-rol="admin">Administración</button>
+  </div>
+  <span class="rot">Vista</span>
+  <div class="seg" id="segVista">
+    <button data-vista="web" class="on">Escritorio</button>
+    <button data-vista="movil">Celular</button>
+  </div>
+</div>
+
+<div class="escenario">
+<div class="marco">
+  <div class="notch"></div>
+  <div class="app">
+
+    <div class="topbar">
+      <div class="logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M14 9h4l4 4v4a1 1 0 0 1-1 1h-2"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg>
+        FletePy
+      </div>
+      <div class="nav" id="nav"></div>
+      <span class="sep"></span>
+      <div class="avatar" id="avatar">FR</div>
+    </div>
+
+    <div class="cuerpo" id="cuerpo">
+
+      <!-- ============ CLIENTE ============ -->
+      <section class="pantalla" data-p="c-inicio">
+       <div class="wrap">
+        <div class="hero">
+          <h2>Tu carga, en camino hoy</h2>
+          <p>Conectamos tu carga con transportistas verificados en todo el país. Cotizá en 30 segundos, sin llamadas.</p>
+          <button class="btn" data-ir="c-cotizar">Cotizar mi envío</button>
+        </div>
+        <div class="grid3">
+          <div class="kpi"><span>Transportistas activos</span><b>348</b></div>
+          <div class="kpi"><span>Ciudades cubiertas</span><b>18</b></div>
+          <div class="kpi"><span>Entregas a tiempo</span><b>98 %</b></div>
+        </div>
+        <div class="card" style="margin-top:14px">
+          <h3>Cómo funciona</h3>
+          <div class="item"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M2 12h20"/></svg></div><div class="txt"><b>1. Cotizá tu envío</b><span>Origen, destino, peso y tipo de carga. El precio aparece al instante.</span></div></div>
+          <div class="item"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg></div><div class="txt"><b>2. Publicá la carga</b><span>Los transportistas de tu zona la ven al momento.</span></div></div>
+          <div class="item"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div><div class="txt"><b>3. Seguí el envío</b><span>Del retiro a la entrega, con confirmación por foto.</span></div></div>
+        </div>
+        <div class="pie">Prototipo de demostración · Los datos son de ejemplo</div>
+       </div>
+      </section>
+
+      <section class="pantalla" data-p="c-cotizar">
+       <div class="wrap">
+        <div class="tit">Cotizar envío</div>
+        <div class="sub">Completá los datos y obtené el precio estimado al instante.</div>
+        <div class="cols">
+          <div class="card">
+            <h3>Datos de la carga</h3>
+            <div class="f"><label>Tipo de carga</label>
+              <select id="tipo"><option value="urbana">Carga urbana — 1 a 999 kg</option><option value="pesada">Carga pesada — 1.000 a 40.000 kg</option></select></div>
+            <div class="grid2">
+              <div class="f"><label>Ciudad de origen</label><select><option>Asunción</option><option>Ciudad del Este</option><option>Encarnación</option><option>Luque</option></select></div>
+              <div class="f"><label>Ciudad de destino</label><select><option>Ciudad del Este</option><option>Asunción</option><option>Encarnación</option><option>Coronel Oviedo</option></select></div>
+            </div>
+            <div class="grid2">
+              <div class="f"><label>Peso (kg)</label><input id="peso" type="number" value="450"></div>
+              <div class="f"><label>Distancia (km)</label><input id="km" type="number" value="320"></div>
+            </div>
+            <div class="f"><label>Fecha de retiro</label><input type="date" value="2026-08-14"></div>
+            <button class="btn" id="calcular">Calcular cotización</button>
+          </div>
+          <div class="card">
+            <h3>Resumen</h3>
+            <div id="resumen">
+              <div class="linea"><span>Tarifa base</span><b id="rBase">₲ 45.000</b></div>
+              <div class="linea"><span>Por peso</span><b id="rPeso">₲ 157.500</b></div>
+              <div class="linea"><span>Por distancia</span><b id="rKm">₲ 384.000</b></div>
+              <div class="linea" style="margin-top:8px;font-size:16px"><span><b>Total estimado</b></span><b id="rTot" style="font-family:Poppins;color:var(--acento)">₲ 586.500</b></div>
+            </div>
+            <div class="nota" style="margin-top:14px">El precio es estimado. Los transportistas pueden ajustarlo en zonas alejadas, con un tope definido por la plataforma.</div>
+            <button class="btn" data-ir="c-publicar">Publicar esta carga</button>
+          </div>
+        </div>
+       </div>
+      </section>
+
+      <section class="pantalla" data-p="c-publicar">
+       <div class="wrap">
+        <div class="tit">Publicar carga</div>
+        <div class="sub">Últimos datos y tu envío queda visible para los transportistas.</div>
+        <div class="cols">
+          <div>
+            <div class="card">
+              <h3>Remitente</h3>
+              <div class="grid2">
+                <div class="f"><label>Nombre completo</label><input value="Franco Ramírez"></div>
+                <div class="f"><label>Teléfono</label><input value="0981 123 456"></div>
+              </div>
+              <div class="f"><label>Dirección de retiro</label><input value="Av. Mariscal López 3450, Asunción"></div>
+            </div>
+            <div class="card">
+              <h3>Destinatario</h3>
+              <div class="grid2">
+                <div class="f"><label>Nombre completo</label><input value="Depósito Central CDE"></div>
+                <div class="f"><label>Teléfono</label><input value="0982 654 321"></div>
+              </div>
+              <div class="f"><label>Dirección de entrega</label><input value="Ruta 7 km 4, Ciudad del Este"></div>
+              <div class="f"><label>Notas (opcional)</label><input placeholder="Horarios, referencias del lugar…"></div>
+            </div>
+          </div>
+          <div class="card">
+            <h3>Tu envío</h3>
+            <div class="linea"><span>Trayecto</span><b>Asunción → CDE</b></div>
+            <div class="linea"><span>Tipo</span><b>Carga urbana</b></div>
+            <div class="linea"><span>Peso</span><b>450 kg</b></div>
+            <div class="linea"><span>Distancia</span><b>320 km</b></div>
+            <div class="linea" style="font-size:16px"><span><b>Total</b></span><b style="font-family:Poppins;color:var(--acento)">₲ 586.500</b></div>
+            <button class="btn" style="margin-top:16px" data-ir="c-envios">Confirmar y publicar</button>
+            <div class="nota" style="margin-top:12px">Publicar es gratis. No se cobra comisión sobre el flete.</div>
+          </div>
+        </div>
+       </div>
+      </section>
+
+      <section class="pantalla" data-p="c-envios">
+       <div class="wrap">
+        <div class="tit">Mis envíos</div>
+        <div class="sub">Seguimiento de todas tus cargas.</div>
+        <div class="card">
+          <div class="item" data-ir="c-detalle"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M14 9h4l4 4v4a1 1 0 0 1-1 1h-2"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg></div>
+            <div class="txt"><b>Asunción → Ciudad del Este</b><span>450 kg · 14 ago 2026 · <span class="chip b">Buscando transportista</span></span></div><div class="precio">₲ 586.500</div></div>
+          <div class="item" data-ir="c-detalle"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M14 9h4l4 4v4a1 1 0 0 1-1 1h-2"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg></div>
+            <div class="txt"><b>Luque → Encarnación</b><span>12.000 kg · 09 ago 2026 · <span class="chip c">En tránsito</span></span></div><div class="precio">₲ 4.310.000</div></div>
+          <div class="item" data-ir="c-detalle"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M14 9h4l4 4v4a1 1 0 0 1-1 1h-2"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg></div>
+            <div class="txt"><b>Asunción → Coronel Oviedo</b><span>780 kg · 02 ago 2026 · <span class="chip a">Entregado</span></span></div><div class="precio">₲ 712.000</div></div>
+        </div>
+       </div>
+      </section>
+
+      <section class="pantalla" data-p="c-detalle">
+       <div class="wrap">
+        <span class="link" data-ir="c-envios">‹ Volver a mis envíos</span>
+        <div class="tit" style="margin-top:10px">Luque → Encarnación</div>
+        <div class="sub">Envío #2026-0841 · 12.000 kg · Carga pesada</div>
+        <div class="cols">
+          <div class="card">
+            <h3>Estado del envío</h3>
+            <div class="mapa">Mapa con seguimiento en vivo (opción P6)</div>
+            <div class="item"><div class="ico" style="background:var(--verde-suave);color:var(--verde)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg></div><div class="txt"><b>Carga publicada</b><span>09 ago, 08:14</span></div></div>
+            <div class="item"><div class="ico" style="background:var(--verde-suave);color:var(--verde)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg></div><div class="txt"><b>Transportista asignado</b><span>09 ago, 08:22 · Ramón Cáceres</span></div></div>
+            <div class="item"><div class="ico" style="background:var(--acento-suave);color:var(--acento)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div><div class="txt"><b>En tránsito</b><span>Retirado 09 ago, 11:05</span></div></div>
+            <div class="item" style="opacity:.45"><div class="ico" style="background:#EEF1F5;color:var(--gris)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg></div><div class="txt"><b>Entregado</b><span>Pendiente · con foto y firma</span></div></div>
+          </div>
+          <div>
+            <div class="card">
+              <h3>Transportista</h3>
+              <div class="item" style="border:0;padding-top:0">
+                <div class="avatar" style="width:44px;height:44px;font-size:15px">RC</div>
+                <div class="txt"><b>Ramón Cáceres</b><span>Camión 15 t · Chapa ABC 123 · ★ 4,8</span></div>
+              </div>
+              <span class="chip a">Documentación verificada</span>
+              <button class="btn sec sm" style="margin-top:14px">Llamar</button>
+            </div>
+            <div class="card">
+              <h3>Detalle</h3>
+              <div class="linea"><span>Peso</span><b>12.000 kg</b></div>
+              <div class="linea"><span>Distancia</span><b>370 km</b></div>
+              <div class="linea"><span>Retiro</span><b>Luque</b></div>
+              <div class="linea"><span>Entrega</span><b>Encarnación</b></div>
+              <div class="linea" style="font-size:15px"><span><b>Total</b></span><b style="font-family:Poppins;color:var(--acento)">₲ 4.310.000</b></div>
+            </div>
+          </div>
+        </div>
+       </div>
+      </section>
+
+      <!-- ============ FLETERO ============ -->
+      <section class="pantalla" data-p="f-cargas">
+       <div class="wrap">
+        <div class="tit">Cargas disponibles</div>
+        <div class="sub">3 cargas nuevas en tu zona de trabajo</div>
+        <div class="aviso"><b>Tu membresía vence en 6 días.</b> Renovala para seguir tomando trabajos sin interrupción. <span class="link" data-ir="f-membresia">Ver mi plan ›</span></div>
+        <div class="card">
+          <div class="item" data-ir="f-detalle"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M14 9h4l4 4v4a1 1 0 0 1-1 1h-2"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg></div>
+            <div class="txt"><b>Asunción → Ciudad del Este</b><span>450 kg · 320 km · a 4 km tuyo</span></div><div class="precio">₲ 586.500</div></div>
+          <div class="item" data-ir="f-detalle"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M14 9h4l4 4v4a1 1 0 0 1-1 1h-2"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg></div>
+            <div class="txt"><b>Asunción → San Lorenzo</b><span>180 kg · 14 km · a 2 km tuyo</span></div><div class="precio">₲ 128.800</div></div>
+          <div class="item" data-ir="f-detalle"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M14 9h4l4 4v4a1 1 0 0 1-1 1h-2"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg></div>
+            <div class="txt"><b>Capiatá → Villarrica</b><span>8.500 kg · 145 km · a 11 km tuyo</span></div><div class="precio">₲ 3.087.500</div></div>
+        </div>
+       </div>
+      </section>
+
+      <section class="pantalla" data-p="f-detalle">
+       <div class="wrap">
+        <span class="link" data-ir="f-cargas">‹ Volver a las cargas</span>
+        <div class="tit" style="margin-top:10px">Asunción → Ciudad del Este</div>
+        <div class="sub">Carga urbana · 450 kg · 320 km</div>
+        <div class="cols">
+          <div class="card">
+            <h3>Detalle de la carga</h3>
+            <div class="mapa">Trayecto sobre mapa</div>
+            <div class="linea"><span>Retiro</span><b>Av. Mariscal López 3450, Asunción</b></div>
+            <div class="linea"><span>Entrega</span><b>Ruta 7 km 4, Ciudad del Este</b></div>
+            <div class="linea"><span>Fecha de retiro</span><b>14 ago 2026</b></div>
+            <div class="linea"><span>Notas</span><b>Entregar antes de las 17:00</b></div>
+          </div>
+          <div>
+            <div class="card">
+              <h3>Oferta</h3>
+              <div class="linea"><span>Precio sugerido</span><b>₲ 586.500</b></div>
+              <div class="f" style="margin-top:12px"><label>Tu oferta (podés ajustarla)</label><input value="586.500"></div>
+              <div class="nota">Tope permitido: hasta ₲ 703.800, un 20 % sobre el sugerido. La puja cierra en <b>07:41</b>.</div>
+              <button class="btn amb" data-ir="f-trabajos">Confirmar y tomar el trabajo</button>
+              <div style="margin-top:12px;font-size:12.5px;color:var(--gris);text-align:center">2 transportistas ya ofertaron</div>
+            </div>
+            <div class="card">
+              <h3>Si tu membresía estuviera vencida</h3>
+              <button class="btn off">Confirmar trabajo</button>
+              <div style="margin-top:10px;font-size:12.5px;color:var(--gris)">Ves la carga y el detalle, pero el botón queda bloqueado hasta regularizar el pago. Así funciona el modelo de membresía.</div>
+            </div>
+          </div>
+        </div>
+       </div>
+      </section>
+
+      <section class="pantalla" data-p="f-trabajos">
+       <div class="wrap">
+        <div class="tit">Mis trabajos</div>
+        <div class="sub">Cargas que tomaste</div>
+        <div class="grid3" style="margin-bottom:16px">
+          <div class="kpi"><span>Este mes</span><b>14</b></div>
+          <div class="kpi"><span>Facturado</span><b>₲ 8,4 M</b></div>
+          <div class="kpi"><span>Calificación</span><b>4,8 ★</b></div>
+        </div>
+        <div class="card">
+          <div class="item"><div class="ico" style="background:var(--ambar-suave);color:var(--ambar)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div>
+            <div class="txt"><b>Asunción → Ciudad del Este</b><span>Retiro hoy 14:00 · <span class="chip b">Por retirar</span></span></div><div class="precio">₲ 586.500</div></div>
+          <div class="item"><div class="ico" style="background:var(--acento-suave);color:var(--acento)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg></div>
+            <div class="txt"><b>Luque → Encarnación</b><span>Retirado 11:05 · <span class="chip c">En tránsito</span></span></div><div class="precio">₲ 4.310.000</div></div>
+          <div class="item"><div class="ico" style="background:var(--verde-suave);color:var(--verde)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg></div>
+            <div class="txt"><b>Asunción → Coronel Oviedo</b><span>Entregado 02 ago · <span class="chip a">Cobrado</span></span></div><div class="precio">₲ 712.000</div></div>
+        </div>
+       </div>
+      </section>
+
+      <section class="pantalla" data-p="f-membresia">
+       <div class="wrap">
+        <div class="tit">Mi membresía</div>
+        <div class="sub">Tu acceso a las cargas de la plataforma</div>
+        <div class="cols">
+          <div>
+            <div class="card" style="background:linear-gradient(135deg,#0E1B2A,#12456B);color:#fff;border:0">
+              <div style="display:flex;justify-content:space-between;align-items:start">
+                <div><div style="font-size:12px;color:#9FBED6;font-weight:600">MI PLAN</div>
+                <div class="pop" style="font-size:22px;font-weight:700;margin-top:4px">Mensual</div></div>
+                <span class="chip a">Activa</span>
+              </div>
+              <div class="barra" style="background:#24435E"><i style="width:80%"></i></div>
+              <div style="font-size:13px;color:#B6CCDE">Vence el 17 de agosto de 2026 · quedan 6 días</div>
+            </div>
+            <div class="card">
+              <h3>Renovación automática</h3>
+              <div class="nota">Vinculá tu tarjeta una vez y la membresía se renueva sola todos los meses. Podés darla de baja cuando quieras.</div>
+              <button class="btn">Activar débito automático</button>
+              <button class="btn sec sm" style="margin-top:10px">Pagar este mes por transferencia</button>
+            </div>
+          </div>
+          <div class="card">
+            <h3>Historial de pagos</h3>
+            <table>
+              <tr><th>Fecha</th><th>Medio</th><th style="text-align:right">Monto</th></tr>
+              <tr><td>17 jul 2026</td><td>Transferencia</td><td style="text-align:right"><b>₲ 150.000</b></td></tr>
+              <tr><td>17 jun 2026</td><td>Tarjeta</td><td style="text-align:right"><b>₲ 150.000</b></td></tr>
+              <tr><td>17 may 2026</td><td>Tarjeta</td><td style="text-align:right"><b>₲ 150.000</b></td></tr>
+              <tr><td>18 abr 2026</td><td>Boca de cobranza</td><td style="text-align:right"><b>₲ 150.000</b></td></tr>
+            </table>
+          </div>
+        </div>
+       </div>
+      </section>
+
+      <!-- ============ ADMIN ============ -->
+      <section class="pantalla" data-p="a-resumen">
+       <div class="wrap">
+        <div class="tit">Panel de administración</div>
+        <div class="sub">Agosto 2026</div>
+        <div class="grid3" style="margin-bottom:14px">
+          <div class="kpi"><span>Ingresos por membresías</span><b>₲ 52,2 M</b></div>
+          <div class="kpi"><span>Transportistas al día</span><b>348</b></div>
+          <div class="kpi"><span>Cargas publicadas</span><b>1.204</b></div>
+        </div>
+        <div class="cols">
+          <div class="card">
+            <h3>Cargas de hoy</h3>
+            <div class="item"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg></div><div class="txt"><b>Asunción → Ciudad del Este</b><span>2 ofertas · cierra en 07:41</span></div><span class="chip b">En puja</span></div>
+            <div class="item"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg></div><div class="txt"><b>Luque → Encarnación</b><span>Ramón Cáceres</span></div><span class="chip c">En tránsito</span></div>
+            <div class="item"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg></div><div class="txt"><b>Capiatá → Villarrica</b><span>Sin ofertas hace 40 min</span></div><span class="chip d">Atención</span></div>
+          </div>
+          <div class="card">
+            <h3>Pendientes de aprobación</h3>
+            <div class="item" data-ir="a-fletores"><div class="ico" style="background:var(--ambar-suave);color:var(--ambar)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg></div><div class="txt"><b>4 comprobantes de transferencia</b><span>Esperando verificación</span></div></div>
+            <div class="item" data-ir="a-fletores"><div class="ico" style="background:var(--ambar-suave);color:var(--ambar)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21v-2a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v2"/></svg></div><div class="txt"><b>7 transportistas nuevos</b><span>Documentación por revisar</span></div></div>
+          </div>
+        </div>
+       </div>
+      </section>
+
+      <section class="pantalla" data-p="a-fletores">
+       <div class="wrap">
+        <div class="tit">Transportistas</div>
+        <div class="sub">Alta, verificación y estado de membresía</div>
+        <div class="card">
+          <table>
+            <tr><th>Nombre</th><th>Vehículo</th><th>Documentación</th><th>Membresía</th></tr>
+            <tr><td><b>Ramón Cáceres</b></td><td>Camión 15 t</td><td><span class="chip a">Verificado</span></td><td><span class="chip a">Al día</span></td></tr>
+            <tr><td><b>Silvia Duarte</b></td><td>Utilitario 1,5 t</td><td><span class="chip a">Verificado</span></td><td><span class="chip b">Vence en 6 días</span></td></tr>
+            <tr><td><b>Óscar Benítez</b></td><td>Camión 8 t</td><td><span class="chip b">Por revisar</span></td><td><span class="chip d">Vencida</span></td></tr>
+            <tr><td><b>Luis Ayala</b></td><td>Furgón 3 t</td><td><span class="chip d">Rechazado</span></td><td><span class="chip d">Sin plan</span></td></tr>
+          </table>
+        </div>
+       </div>
+      </section>
+
+      <section class="pantalla" data-p="a-membresias">
+       <div class="wrap">
+        <div class="tit">Membresías y cobros</div>
+        <div class="sub">Estado de la facturación recurrente</div>
+        <div class="grid3" style="margin-bottom:14px">
+          <div class="kpi"><span>Al día</span><b style="color:var(--verde)">348</b></div>
+          <div class="kpi"><span>Por vencer (7 días)</span><b style="color:var(--ambar)">41</b></div>
+          <div class="kpi"><span>Vencidas</span><b style="color:var(--rojo)">23</b></div>
+        </div>
+        <div class="card">
+          <h3>Últimos movimientos</h3>
+          <table>
+            <tr><th>Transportista</th><th>Medio</th><th>Estado</th><th style="text-align:right">Monto</th></tr>
+            <tr><td>Ramón Cáceres</td><td>Débito automático</td><td><span class="chip a">Acreditado</span></td><td style="text-align:right"><b>₲ 150.000</b></td></tr>
+            <tr><td>Silvia Duarte</td><td>Transferencia</td><td><span class="chip b">Por aprobar</span></td><td style="text-align:right"><b>₲ 150.000</b></td></tr>
+            <tr><td>Marcos Ortiz</td><td>QR</td><td><span class="chip a">Acreditado</span></td><td style="text-align:right"><b>₲ 150.000</b></td></tr>
+            <tr><td>Óscar Benítez</td><td>Tarjeta</td><td><span class="chip d">Rechazado</span></td><td style="text-align:right"><b>₲ 150.000</b></td></tr>
+          </table>
+        </div>
+       </div>
+      </section>
+
+    </div><!-- /cuerpo -->
+
+    <div class="tabbar" id="tabbar"></div>
+  </div>
+</div>
+</div>
+
+<script>
+
+// ===== porton de acceso =====
+// Cortesia, no seguridad: la validacion ocurre en el navegador.
+// Para cambiar la clave, reemplazar el valor de CLAVE por el nuevo codigo.
+const CLAVE = 'flete2026';
+const porton = document.getElementById('porton');
+function abrir(){
+  if (document.getElementById('clave').value.trim().toLowerCase() === CLAVE) {
+    porton.classList.add('oculto');
+    try { sessionStorage.setItem('acceso','ok'); } catch(e){}
+  } else {
+    document.getElementById('perr').textContent = 'Código incorrecto';
+    document.getElementById('clave').select();
+  }
+}
+document.getElementById('entrar').onclick = abrir;
+document.getElementById('clave').onkeydown = e => { if (e.key === 'Enter') abrir(); };
+try { if (sessionStorage.getItem('acceso') === 'ok') porton.classList.add('oculto'); } catch(e){}
+
+const MENU = {
+  cliente:[
+    ['c-inicio','Inicio','M3 12l9-9 9 9M5 10v10h14V10'],
+    ['c-cotizar','Cotizar','M12 2v20M2 12h20'],
+    ['c-envios','Mis envíos','M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2M14 9h4l4 4v4a1 1 0 0 1-1 1h-2'],
+  ],
+  fletero:[
+    ['f-cargas','Cargas','M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2M14 9h4l4 4v4a1 1 0 0 1-1 1h-2'],
+    ['f-trabajos','Mis trabajos','M20 6 9 17l-5-5'],
+    ['f-membresia','Membresía','M2 7h20v12H2zM2 11h20'],
+  ],
+  admin:[
+    ['a-resumen','Resumen','M3 3v18h18M7 15l4-4 3 3 5-6'],
+    ['a-fletores','Transportistas','M12 8a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21v-2a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v2'],
+    ['a-membresias','Cobros','M2 7h20v12H2zM2 11h20'],
+  ],
+};
+const INI = {cliente:'c-inicio', fletero:'f-cargas', admin:'a-resumen'};
+const INIC = {cliente:'FR', fletero:'RC', admin:'AD'};
+let rol = 'cliente';
+
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+
+function pintarMenu(){
+  const items = MENU[rol];
+  $('#nav').innerHTML = items.map(([id,txt]) =>
+    `<button data-ir="${id}">${txt}</button>`).join('');
+  $('#tabbar').innerHTML = items.map(([id,txt,d]) =>
+    `<button data-ir="${id}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="${d}"/></svg>${txt}</button>`).join('');
+  $('#avatar').textContent = INIC[rol];
+  enlazar();
+}
+
+function ir(id){
+  $$('.pantalla').forEach(s => s.classList.toggle('on', s.dataset.p === id));
+  $$('#nav button, #tabbar button').forEach(b => b.classList.toggle('on', b.dataset.ir === id));
+  $('#cuerpo').scrollTop = 0;
+}
+
+function enlazar(){
+  $$('[data-ir]').forEach(b => { b.onclick = () => ir(b.dataset.ir); });
+}
+
+$('#segRol').onclick = e => {
+  const b = e.target.closest('button'); if(!b) return;
+  $$('#segRol button').forEach(x => x.classList.remove('on'));
+  b.classList.add('on'); rol = b.dataset.rol;
+  pintarMenu(); ir(INI[rol]);
+};
+
+$('#segVista').onclick = e => {
+  const b = e.target.closest('button'); if(!b) return;
+  $$('#segVista button').forEach(x => x.classList.remove('on'));
+  b.classList.add('on');
+  document.body.classList.toggle('movil', b.dataset.vista === 'movil');
+};
+
+const fmt = n => '₲ ' + Math.round(n).toLocaleString('es-PY');
+$('#calcular').onclick = () => {
+  const t = $('#tipo').value;
+  const base = t === 'pesada' ? 350000 : 45000;
+  const pk = t === 'pesada' ? 250 : 350;
+  const kk = t === 'pesada' ? 4500 : 1200;
+  const peso = +$('#peso').value || 0, km = +$('#km').value || 0;
+  $('#rBase').textContent = fmt(base);
+  $('#rPeso').textContent = fmt(peso * pk);
+  $('#rKm').textContent = fmt(km * kk);
+  $('#rTot').textContent = fmt(base + peso * pk + km * kk);
+};
+
+pintarMenu();
+ir('c-inicio');
+</script>
+</body>
+</html>
